@@ -1,9 +1,25 @@
 import { BuildNoticeFormState, ValidationState } from '@/types/buildNotice';
 
-// Generate unique BN number
+/**
+ * Generate unique BN number using timestamp and cryptographically secure random bytes.
+ * Format: BN-{timestamp}-{random}
+ * Note: In production, consider using a database sequence or UUID for better uniqueness guarantees.
+ */
 export const generateBnNo = (): string => {
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  // Use crypto API for better randomness if available
+  let random: string;
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const array = new Uint8Array(4);
+    crypto.getRandomValues(array);
+    random = Array.from(array)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase();
+  } else {
+    // Fallback for environments without crypto API
+    random = Math.random().toString(36).substring(2, 10).toUpperCase();
+  }
   return `BN-${timestamp}-${random}`;
 };
 
@@ -121,7 +137,16 @@ export const isFormValid = (validationState: ValidationState): boolean => {
   return Object.values(validationState).every((field) => field.isValid);
 };
 
-// Project data for auto-fill (mock data)
+/**
+ * Project data configuration for auto-fill functionality.
+ * 
+ * TODO: In production, this data should come from:
+ * - An API endpoint (e.g., /api/projects)
+ * - A database query
+ * - An environment configuration file
+ * 
+ * This mock data is for development/demo purposes only.
+ */
 export interface ProjectData {
   model: string;
   customer: string;

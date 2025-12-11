@@ -52,6 +52,12 @@ export function BuildNoticeForm() {
     updateField(field, value);
   };
 
+  // Helper for handling numeric fields safely
+  const handleNumericChange = (field: keyof BuildNoticeFormState) => (value: string | number) => {
+    const numValue = typeof value === 'number' ? value : parseInt(value, 10);
+    updateField(field, isNaN(numValue) ? 0 : numValue);
+  };
+
   // Helper for handling date field
   const handleDateChange = (value: string | number) => {
     const strValue = String(value);
@@ -94,9 +100,9 @@ export function BuildNoticeForm() {
                       label="BN No."
                       name="bnNo"
                       value={formState.bnNo}
-                      onChange={() => {}} // Read-only
+                      onChange={() => {}}
                       placeholder="System generated"
-                      className="bg-gray-100"
+                      readOnly
                     />
 
                     <FormSelect
@@ -163,7 +169,7 @@ export function BuildNoticeForm() {
                       name="buildQty"
                       type="number"
                       value={formState.buildQty}
-                      onChange={(value) => updateField('buildQty', parseInt(value as string) || 0)}
+                      onChange={handleNumericChange('buildQty')}
                       error={validationState.buildQty?.error}
                       placeholder="e.g., 100"
                     />
