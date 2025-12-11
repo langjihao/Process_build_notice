@@ -105,14 +105,14 @@ export const extractFieldsFromNaturalLanguage = (input: string): Partial<BuildNo
   const suggestions: Partial<BuildNotice> = {};
   const lowerInput = input.toLowerCase();
 
-  // Extract NPI Number
-  const npiMatch = input.match(/npi[:\s#-]*([a-z0-9-]+)/i);
+  // Extract NPI Number - more specific pattern
+  const npiMatch = input.match(/npi[:\s#-]*([A-Z0-9]{3,}-[0-9]{4}-[0-9]{3}|[A-Z0-9-]{5,})/i);
   if (npiMatch) {
     suggestions.npiNumber = npiMatch[1].toUpperCase();
   }
 
-  // Extract Part Number
-  const partMatch = input.match(/part(?:\s+number)?[:\s#-]*([a-z0-9-]+)/i);
+  // Extract Part Number - more specific pattern
+  const partMatch = input.match(/part(?:\s+number)?[:\s#-]*([A-Z]{2,}[0-9-]{2,})/i);
   if (partMatch) {
     suggestions.partNumber = partMatch[1].toUpperCase();
   }

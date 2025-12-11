@@ -49,7 +49,7 @@ export type AGUIEventType =
 export interface AGUIEvent {
   type: AGUIEventType;
   field?: keyof BuildNotice;
-  value?: any;
+  value?: string | number | Partial<BuildNotice> | ValidationState;
   source: 'ui' | 'ai';
   timestamp: string;
 }

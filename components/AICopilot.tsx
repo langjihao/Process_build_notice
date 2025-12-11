@@ -32,12 +32,29 @@ export function AICopilot({
       const suggestions = onProcessInput(input);
       setInput('');
 
-      // Auto-apply suggestions if any
+      // Auto-apply suggestions after processing if any exist
       if (Object.keys(suggestions).length > 0) {
-        setTimeout(() => {
+        // Use a slight delay to ensure state updates are processed
+        const timeoutId = setTimeout(() => {
           onApplySuggestions(suggestions);
         }, 500);
+        
+        // Cleanup timeout on unmount
+        return () => clearTimeout(timeoutId);
       }
+    }
+  };
+
+  const handleQuickAction = (prompt: string) => {
+    const suggestions = onProcessInput(prompt);
+    if (Object.keys(suggestions).length > 0) {
+      // Use a slight delay to ensure state updates are processed
+      const timeoutId = setTimeout(() => {
+        onApplySuggestions(suggestions);
+      }, 500);
+      
+      // Cleanup timeout on unmount
+      return () => clearTimeout(timeoutId);
     }
   };
 
@@ -151,14 +168,7 @@ export function AICopilot({
               {examplePrompts.slice(0, 2).map((prompt, idx) => (
                 <button
                   key={idx}
-                  onClick={() => {
-                    const suggestions = onProcessInput(prompt);
-                    if (Object.keys(suggestions).length > 0) {
-                      setTimeout(() => {
-                        onApplySuggestions(suggestions);
-                      }, 500);
-                    }
-                  }}
+                  onClick={() => handleQuickAction(prompt)}
                   className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded border border-gray-300"
                   disabled={aiState.isProcessing}
                 >
