@@ -7,7 +7,7 @@ interface FormFieldProps {
   name: string;
   type?: string;
   value: string | number;
-  onChange: (value: any) => void;
+  onChange: (value: string | number) => void;
   error?: string;
   required?: boolean;
   placeholder?: string;
