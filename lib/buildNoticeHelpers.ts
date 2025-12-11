@@ -1,71 +1,108 @@
-import { BuildNotice, ValidationState } from '@/types/buildNotice';
+import { BuildNoticeFormState, ValidationState } from '@/types/buildNotice';
 
-// Initial empty Build Notice
-export const initialBuildNotice: BuildNotice = {
-  npiNumber: '',
-  partNumber: '',
-  revision: '',
+/**
+ * Generate unique BN number using timestamp and cryptographically secure random bytes.
+ * Format: BN-{timestamp}-{random}
+ * Note: In production, consider using a database sequence or UUID for better uniqueness guarantees.
+ */
+export const generateBnNo = (): string => {
+  const timestamp = Date.now();
+  // Use crypto API for better randomness if available
+  let random: string;
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const array = new Uint8Array(4);
+    crypto.getRandomValues(array);
+    random = Array.from(array)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase();
+  } else {
+    // Fallback for environments without crypto API
+    random = Math.random().toString(36).substring(2, 10).toUpperCase();
+  }
+  return `BN-${timestamp}-${random}`;
+};
+
+// Initial empty Build Notice Form State
+export const initialBuildNoticeFormState: BuildNoticeFormState = {
+  // Section A: Basic Information
+  bnNo: generateBnNo(),
+  project: '',
+  model: '',
   description: '',
-  quantity: 0,
-  buildDate: '',
-  assemblyLocation: '',
-  priority: 'medium',
-  requiredBy: '',
-  notes: '',
-  status: 'draft',
+  customer: '',
+  customerPn: '',
+  pcbPn: '',
+  stage: '',
+  buildQty: 0,
+  buildDate: null,
+  cimFile: '',
+  remark: '',
+
+  // Section B: Role Settings
+  epe: '',
+  sl: '',
+  mpe: '',
+  fw: '',
+  rd: '',
+  te: '',
+  epm: '',
+  mpm: '',
 };
 
 // Validation rules
 export const validateField = (
-  field: keyof BuildNotice,
-  value: any
+  field: keyof BuildNoticeFormState,
+  value: string | number | Date | null
 ): { isValid: boolean; error?: string } => {
   switch (field) {
-    case 'npiNumber':
-      if (!value || value.trim() === '') {
-        return { isValid: false, error: 'NPI Number is required' };
+    // Section A: Required fields
+    case 'model':
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return { isValid: false, error: 'Model is required' };
       }
       return { isValid: true };
 
-    case 'partNumber':
-      if (!value || value.trim() === '') {
-        return { isValid: false, error: 'Part Number is required' };
+    case 'customer':
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return { isValid: false, error: 'Customer is required' };
       }
       return { isValid: true };
 
-    case 'revision':
-      if (!value || value.trim() === '') {
-        return { isValid: false, error: 'Revision is required' };
+    case 'customerPn':
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return { isValid: false, error: 'Customer P/N is required' };
       }
       return { isValid: true };
 
-    case 'description':
-      if (!value || value.trim() === '') {
-        return { isValid: false, error: 'Description is required' };
+    case 'pcbPn':
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return { isValid: false, error: 'PCB P/N (Hardware Version) is required' };
       }
       return { isValid: true };
 
-    case 'quantity':
-      if (value === undefined || value === null || value <= 0) {
-        return { isValid: false, error: 'Quantity must be greater than 0' };
+    case 'stage':
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return { isValid: false, error: 'Stage is required' };
       }
       return { isValid: true };
 
-    case 'buildDate':
-      if (!value) {
-        return { isValid: false, error: 'Build Date is required' };
+    // Section B: Required role fields
+    case 'epe':
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return { isValid: false, error: 'Electronics Project Engineer is required' };
       }
       return { isValid: true };
 
-    case 'assemblyLocation':
-      if (!value || value.trim() === '') {
-        return { isValid: false, error: 'Assembly Location is required' };
+    case 'sl':
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return { isValid: false, error: 'System Lead is required' };
       }
       return { isValid: true };
 
-    case 'requiredBy':
-      if (!value) {
-        return { isValid: false, error: 'Required By date is required' };
+    case 'mpe':
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        return { isValid: false, error: 'Mechanical Project Engineer is required' };
       }
       return { isValid: true };
 
@@ -75,21 +112,21 @@ export const validateField = (
 };
 
 // Validate entire form
-export const validateForm = (buildNotice: BuildNotice): ValidationState => {
+export const validateForm = (formState: BuildNoticeFormState): ValidationState => {
   const validationState: ValidationState = {};
-  const requiredFields: (keyof BuildNotice)[] = [
-    'npiNumber',
-    'partNumber',
-    'revision',
-    'description',
-    'quantity',
-    'buildDate',
-    'assemblyLocation',
-    'requiredBy',
+  const requiredFields: (keyof BuildNoticeFormState)[] = [
+    'model',
+    'customer',
+    'customerPn',
+    'pcbPn',
+    'stage',
+    'epe',
+    'sl',
+    'mpe',
   ];
 
   requiredFields.forEach((field) => {
-    validationState[field] = validateField(field, buildNotice[field]);
+    validationState[field] = validateField(field, formState[field]);
   });
 
   return validationState;
@@ -100,58 +137,74 @@ export const isFormValid = (validationState: ValidationState): boolean => {
   return Object.values(validationState).every((field) => field.isValid);
 };
 
+/**
+ * Project data configuration for auto-fill functionality.
+ * 
+ * TODO: In production, this data should come from:
+ * - An API endpoint (e.g., /api/projects)
+ * - A database query
+ * - An environment configuration file
+ * 
+ * This mock data is for development/demo purposes only.
+ */
+export interface ProjectData {
+  model: string;
+  customer: string;
+}
+
+export const projectDataMap: Record<string, ProjectData> = {
+  'Project A': { model: 'Model-A1', customer: 'Customer Alpha' },
+  'Project B': { model: 'Model-B2', customer: 'Customer Beta' },
+  'Project C': { model: 'Model-C3', customer: 'Customer Gamma' },
+};
+
+// Get project data for auto-fill
+export const getProjectData = (projectName: string): ProjectData | null => {
+  return projectDataMap[projectName] || null;
+};
+
 // Natural Language Processing helpers for AI Co-pilot
-export const extractFieldsFromNaturalLanguage = (input: string): Partial<BuildNotice> => {
-  const suggestions: Partial<BuildNotice> = {};
+export const extractFieldsFromNaturalLanguage = (input: string): Partial<BuildNoticeFormState> => {
+  const suggestions: Partial<BuildNoticeFormState> = {};
   const lowerInput = input.toLowerCase();
 
-  // Extract NPI Number - more specific pattern
-  const npiMatch = input.match(/npi[:\s#-]*([A-Z0-9]{3,}-[0-9]{4}-[0-9]{3}|[A-Z0-9-]{5,})/i);
-  if (npiMatch) {
-    suggestions.npiNumber = npiMatch[1].toUpperCase();
+  // Extract Project
+  const projectMatch = input.match(/project[:\s]*([A-Za-z0-9\s-]+?)(?:\s|$|,)/i);
+  if (projectMatch) {
+    suggestions.project = projectMatch[1].trim();
   }
 
-  // Extract Part Number - more specific pattern
-  const partMatch = input.match(/part(?:\s+number)?[:\s#-]*([A-Z]{2,}[0-9-]{2,})/i);
-  if (partMatch) {
-    suggestions.partNumber = partMatch[1].toUpperCase();
+  // Extract Customer P/N
+  const customerPnMatch = input.match(/customer\s*p[\/]?n[:\s]*([A-Z0-9-]+)/i);
+  if (customerPnMatch) {
+    suggestions.customerPn = customerPnMatch[1].toUpperCase();
   }
 
-  // Extract Revision
-  const revMatch = input.match(/rev(?:ision)?[:\s]*([a-z0-9.]+)/i);
-  if (revMatch) {
-    suggestions.revision = revMatch[1].toUpperCase();
+  // Extract PCB P/N
+  const pcbPnMatch = input.match(/pcb\s*p[\/]?n[:\s]*([A-Z0-9-]+)/i);
+  if (pcbPnMatch) {
+    suggestions.pcbPn = pcbPnMatch[1].toUpperCase();
   }
 
-  // Extract Quantity
+  // Extract Stage
+  const stagePatterns = ['evt', 'dvt', 'pvt', 'mp'];
+  for (const stage of stagePatterns) {
+    if (lowerInput.includes(stage)) {
+      suggestions.stage = stage.toUpperCase();
+      break;
+    }
+  }
+
+  // Extract Build Quantity
   const qtyMatch = input.match(/(?:quantity|qty|build)[:\s]*(\d+)/i);
   if (qtyMatch) {
-    suggestions.quantity = parseInt(qtyMatch[1], 10);
-  }
-
-  // Extract Priority
-  if (lowerInput.includes('urgent') || lowerInput.includes('asap')) {
-    suggestions.priority = 'urgent';
-  } else if (lowerInput.includes('high priority')) {
-    suggestions.priority = 'high';
-  } else if (lowerInput.includes('low priority')) {
-    suggestions.priority = 'low';
+    suggestions.buildQty = parseInt(qtyMatch[1], 10);
   }
 
   // Extract dates (simplified)
   const dateMatch = input.match(/(\d{4}-\d{2}-\d{2})/);
   if (dateMatch) {
-    if (lowerInput.includes('required by') || lowerInput.includes('need by')) {
-      suggestions.requiredBy = dateMatch[1];
-    } else if (lowerInput.includes('build date')) {
-      suggestions.buildDate = dateMatch[1];
-    }
-  }
-
-  // Extract location
-  const locationMatch = input.match(/(?:location|site|facility)[:\s]*([a-z0-9\s-]+?)(?:\s|$|,)/i);
-  if (locationMatch) {
-    suggestions.assemblyLocation = locationMatch[1].trim();
+    suggestions.buildDate = new Date(dateMatch[1]);
   }
 
   return suggestions;

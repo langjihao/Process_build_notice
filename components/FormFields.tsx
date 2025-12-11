@@ -7,11 +7,12 @@ interface FormFieldProps {
   name: string;
   type?: string;
   value: string | number;
-  onChange: (value: any) => void;
+  onChange: (value: string | number) => void;
   error?: string;
   required?: boolean;
   placeholder?: string;
   className?: string;
+  readOnly?: boolean;
 }
 
 export function FormField({
@@ -24,6 +25,7 @@ export function FormField({
   required = false,
   placeholder,
   className = '',
+  readOnly = false,
 }: FormFieldProps) {
   const hasError = error && error.length > 0;
 
@@ -40,9 +42,10 @@ export function FormField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
+        readOnly={readOnly}
         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
           hasError ? 'border-red-500' : 'border-gray-300'
-        }`}
+        } ${readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
       />
       {hasError && <p className="text-red-500 text-sm mt-1">{error}</p>}
     </div>

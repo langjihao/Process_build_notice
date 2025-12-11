@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { AIAgentState, BuildNotice } from '@/types/buildNotice';
+import { AIAgentState, BuildNoticeFormState } from '@/types/buildNotice';
 
 interface AICopilotProps {
   aiState: AIAgentState;
-  onProcessInput: (input: string) => Partial<BuildNotice>;
-  onApplySuggestions: (suggestions: Partial<BuildNotice>) => void;
+  onProcessInput: (input: string) => Partial<BuildNoticeFormState>;
+  onApplySuggestions: (suggestions: Partial<BuildNoticeFormState>) => void;
 }
 
 export function AICopilot({
@@ -59,9 +59,9 @@ export function AICopilot({
   };
 
   const examplePrompts = [
-    'NPI-2024-001, Part ABC-123, Rev A, build 100 units by 2024-12-20',
-    'Create build notice for part XYZ-456 revision B, quantity 50, urgent priority',
-    'Assembly at Building 5, required by 2024-12-25',
+    'Project A, Customer P/N CUST-001, PCB P/N PCB-REV-A, stage EVT, build 50 units',
+    'Set stage to DVT, quantity 100, build date 2024-12-20',
+    'Project B with customer P/N ABC-123 for PVT stage',
   ];
 
   return (
@@ -90,14 +90,14 @@ export function AICopilot({
             {aiState.messages.length === 0 ? (
               <div className="text-gray-500 text-sm">
                 <p className="mb-2">
-                  👋 Hi! I'm your AI Co-pilot. I can help you fill out the Build
+                  👋 Hi! I&apos;m your AI Co-pilot. I can help you fill out the Build
                   Notice form using natural language.
                 </p>
                 <p className="mb-2">Try saying things like:</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   {examplePrompts.map((prompt, idx) => (
                     <li key={idx} className="text-gray-600">
-                      "{prompt}"
+                      &quot;{prompt}&quot;
                     </li>
                   ))}
                 </ul>

@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { BuildNotice, AIAgentState, AGUIEvent, ValidationState } from '@/types/buildNotice';
+import { BuildNoticeFormState, AIAgentState, AGUIEvent, ValidationState } from '@/types/buildNotice';
 import {
-  initialBuildNotice,
+  initialBuildNoticeFormState,
+  generateBnNo,
   validateField,
   validateForm,
   extractFieldsFromNaturalLanguage,
+  getProjectData,
 } from '@/lib/buildNoticeHelpers';
 
 /**
@@ -15,7 +17,7 @@ import {
  */
 export function useAGUIState() {
   // Shared state - single source of truth
-  const [buildNotice, setBuildNotice] = useState<BuildNotice>(initialBuildNotice);
+  const [formState, setFormState] = useState<BuildNoticeFormState>(initialBuildNoticeFormState);
   const [validationState, setValidationState] = useState<ValidationState>({});
   const [aiState, setAIState] = useState<AIAgentState>({
     messages: [],
@@ -35,13 +37,23 @@ export function useAGUIState() {
 
   // Update field (from UI or AI)
   const updateField = useCallback(
-    (field: keyof BuildNotice, value: any, source: 'ui' | 'ai' = 'ui') => {
-      setBuildNotice((prev) => {
+    (field: keyof BuildNoticeFormState, value: string | number | Date | null, source: 'ui' | 'ai' = 'ui') => {
+      setFormState((prev) => {
         const updated = { ...prev, [field]: value };
+        
+        // Auto-fill model and customer when project changes
+        if (field === 'project' && typeof value === 'string') {
+          const projectData = getProjectData(value);
+          if (projectData) {
+            updated.model = projectData.model;
+            updated.customer = projectData.customer;
+          }
+        }
+        
         return updated;
       });
 
-      // Validate field
+      // Validate field if it's a required field
       const validation = validateField(field, value);
       setValidationState((prev) => ({
         ...prev,
@@ -52,7 +64,7 @@ export function useAGUIState() {
       emitEvent({
         type: 'field_update',
         field,
-        value,
+        value: value instanceof Date ? value.toISOString() : value ?? '',
         source,
       });
     },
@@ -107,9 +119,9 @@ export function useAGUIState() {
 
   // Apply AI suggestions
   const applySuggestions = useCallback(
-    (suggestions: Partial<BuildNotice>) => {
+    (suggestions: Partial<BuildNoticeFormState>) => {
       Object.entries(suggestions).forEach(([field, value]) => {
-        updateField(field as keyof BuildNotice, value, 'ai');
+        updateField(field as keyof BuildNoticeFormState, value as string | number | Date | null, 'ai');
       });
 
       setAIState((prev) => ({
@@ -128,7 +140,7 @@ export function useAGUIState() {
 
   // Validate all fields
   const validateAll = useCallback(() => {
-    const validation = validateForm(buildNotice);
+    const validation = validateForm(formState);
     setValidationState(validation);
 
     emitEvent({
@@ -138,7 +150,7 @@ export function useAGUIState() {
     });
 
     return validation;
-  }, [buildNotice, emitEvent]);
+  }, [formState, emitEvent]);
 
   // Submit form
   const submitForm = useCallback(() => {
@@ -146,29 +158,24 @@ export function useAGUIState() {
     const isValid = Object.values(validation).every((field) => field.isValid);
 
     if (isValid) {
-      const submittedNotice = {
-        ...buildNotice,
-        status: 'submitted' as const,
-        updatedAt: new Date().toISOString(),
-      };
-
-      setBuildNotice(submittedNotice);
-
       emitEvent({
         type: 'form_submit',
-        value: submittedNotice,
+        value: formState,
         source: 'ui',
       });
 
-      return { success: true, data: submittedNotice };
+      return { success: true, data: formState };
     }
 
     return { success: false, errors: validation };
-  }, [buildNotice, validateAll, emitEvent]);
+  }, [formState, validateAll, emitEvent]);
 
   // Reset form
   const resetForm = useCallback(() => {
-    setBuildNotice(initialBuildNotice);
+    setFormState({
+      ...initialBuildNoticeFormState,
+      bnNo: generateBnNo(), // Generate new BN number on reset
+    });
     setValidationState({});
     setAIState({
       messages: [],
@@ -180,7 +187,7 @@ export function useAGUIState() {
 
   return {
     // State
-    buildNotice,
+    formState,
     validationState,
     aiState,
     events,

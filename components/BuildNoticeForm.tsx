@@ -1,14 +1,15 @@
 'use client';
 
 import React from 'react';
-import { BuildNotice } from '@/types/buildNotice';
+import { BuildNoticeFormState } from '@/types/buildNotice';
 import { useAGUIState } from '@/lib/useAGUIState';
 import { FormField, FormTextArea, FormSelect } from './FormFields';
 import { AICopilot } from './AICopilot';
+import { projectDataMap } from '@/lib/buildNoticeHelpers';
 
 export function BuildNoticeForm() {
   const {
-    buildNotice,
+    formState,
     validationState,
     aiState,
     updateField,
@@ -30,20 +31,44 @@ export function BuildNoticeForm() {
     }
   };
 
-  const priorityOptions = [
-    { value: 'low', label: 'Low' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'high', label: 'High' },
-    { value: 'urgent', label: 'Urgent' },
+  const projectOptions = [
+    { value: '', label: 'Select Project' },
+    ...Object.keys(projectDataMap).map((project) => ({
+      value: project,
+      label: project,
+    })),
   ];
 
-  const statusOptions = [
-    { value: 'draft', label: 'Draft' },
-    { value: 'submitted', label: 'Submitted' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'in-progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
+  const stageOptions = [
+    { value: '', label: 'Select Stage' },
+    { value: 'EVT', label: 'EVT (Engineering Validation Test)' },
+    { value: 'DVT', label: 'DVT (Design Validation Test)' },
+    { value: 'PVT', label: 'PVT (Production Validation Test)' },
+    { value: 'MP', label: 'MP (Mass Production)' },
   ];
+
+  // Helper for updating fields with proper typing
+  const handleFieldUpdate = (field: keyof BuildNoticeFormState) => (value: string | number) => {
+    updateField(field, value);
+  };
+
+  // Helper for handling numeric fields safely
+  const handleNumericChange = (field: keyof BuildNoticeFormState) => (value: string | number) => {
+    const numValue = typeof value === 'number' ? value : parseInt(value, 10);
+    updateField(field, isNaN(numValue) ? 0 : numValue);
+  };
+
+  // Helper for handling date field
+  const handleDateChange = (value: string | number) => {
+    const strValue = String(value);
+    updateField('buildDate', strValue ? new Date(strValue) : null);
+  };
+
+  // Format date for input
+  const formatDateForInput = (date: Date | null): string => {
+    if (!date) return '';
+    return date instanceof Date ? date.toISOString().split('T')[0] : '';
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
@@ -51,7 +76,7 @@ export function BuildNoticeForm() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            NPI Build Notice System
+            Build Notice System
           </h1>
           <p className="text-gray-600">
             AI-Native Manufacturing MVP with AG-UI Protocol
@@ -65,142 +90,209 @@ export function BuildNoticeForm() {
               <h2 className="text-2xl font-semibold mb-6">Build Notice Form</h2>
 
               <form onSubmit={handleSubmit}>
-                {/* Basic Information Section */}
+                {/* Section A: Basic Information */}
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
-                    Basic Information
+                    Section A: Basic Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
-                      label="NPI Number"
-                      name="npiNumber"
-                      value={buildNotice.npiNumber}
-                      onChange={(value) => updateField('npiNumber', value)}
-                      error={validationState.npiNumber?.error}
-                      required
-                      placeholder="e.g., NPI-2024-001"
+                      label="BN No."
+                      name="bnNo"
+                      value={formState.bnNo}
+                      onChange={() => {}}
+                      placeholder="System generated"
+                      readOnly
+                    />
+
+                    <FormSelect
+                      label="Project"
+                      name="project"
+                      value={formState.project}
+                      onChange={handleFieldUpdate('project')}
+                      options={projectOptions}
+                      error={validationState.project?.error}
                     />
 
                     <FormField
-                      label="Part Number"
-                      name="partNumber"
-                      value={buildNotice.partNumber}
-                      onChange={(value) => updateField('partNumber', value)}
-                      error={validationState.partNumber?.error}
+                      label="Model"
+                      name="model"
+                      value={formState.model}
+                      onChange={handleFieldUpdate('model')}
+                      error={validationState.model?.error}
                       required
-                      placeholder="e.g., ABC-123"
+                      placeholder="Auto-filled based on Project"
                     />
 
                     <FormField
-                      label="Revision"
-                      name="revision"
-                      value={buildNotice.revision}
-                      onChange={(value) => updateField('revision', value)}
-                      error={validationState.revision?.error}
+                      label="Customer"
+                      name="customer"
+                      value={formState.customer}
+                      onChange={handleFieldUpdate('customer')}
+                      error={validationState.customer?.error}
                       required
-                      placeholder="e.g., A, B, 1.0"
+                      placeholder="Auto-filled based on Project"
                     />
 
                     <FormField
-                      label="Quantity"
-                      name="quantity"
+                      label="Customer P/N"
+                      name="customerPn"
+                      value={formState.customerPn}
+                      onChange={handleFieldUpdate('customerPn')}
+                      error={validationState.customerPn?.error}
+                      required
+                      placeholder="e.g., CUST-001"
+                    />
+
+                    <FormField
+                      label="PCB P/N (Hardware Version)"
+                      name="pcbPn"
+                      value={formState.pcbPn}
+                      onChange={handleFieldUpdate('pcbPn')}
+                      error={validationState.pcbPn?.error}
+                      required
+                      placeholder="e.g., PCB-REV-A"
+                    />
+
+                    <FormSelect
+                      label="Stage"
+                      name="stage"
+                      value={formState.stage}
+                      onChange={handleFieldUpdate('stage')}
+                      options={stageOptions}
+                      error={validationState.stage?.error}
+                      required
+                    />
+
+                    <FormField
+                      label="Build Qty"
+                      name="buildQty"
                       type="number"
-                      value={buildNotice.quantity}
-                      onChange={(value) => updateField('quantity', parseInt(value) || 0)}
-                      error={validationState.quantity?.error}
-                      required
+                      value={formState.buildQty}
+                      onChange={handleNumericChange('buildQty')}
+                      error={validationState.buildQty?.error}
                       placeholder="e.g., 100"
+                    />
+
+                    <FormField
+                      label="Build Date"
+                      name="buildDate"
+                      type="date"
+                      value={formatDateForInput(formState.buildDate)}
+                      onChange={handleDateChange}
+                      error={validationState.buildDate?.error}
+                    />
+
+                    <FormField
+                      label="CIM File"
+                      name="cimFile"
+                      value={formState.cimFile}
+                      onChange={handleFieldUpdate('cimFile')}
+                      placeholder="File path or reference"
                     />
                   </div>
 
                   <FormTextArea
                     label="Description"
                     name="description"
-                    value={buildNotice.description}
-                    onChange={(value) => updateField('description', value)}
+                    value={formState.description}
+                    onChange={handleFieldUpdate('description')}
                     error={validationState.description?.error}
-                    required
                     placeholder="Describe the build notice..."
+                    rows={3}
+                  />
+
+                  <FormTextArea
+                    label="Remark"
+                    name="remark"
+                    value={formState.remark}
+                    onChange={handleFieldUpdate('remark')}
+                    placeholder="Any additional remarks..."
                     rows={3}
                   />
                 </div>
 
-                {/* Schedule Section */}
+                {/* Section B: Role Settings */}
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
-                    Schedule
+                    Section B: Role Settings
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
-                      label="Build Date"
-                      name="buildDate"
-                      type="date"
-                      value={buildNotice.buildDate}
-                      onChange={(value) => updateField('buildDate', value)}
-                      error={validationState.buildDate?.error}
+                      label="EPE (Electronics Project Engineer)"
+                      name="epe"
+                      value={formState.epe}
+                      onChange={handleFieldUpdate('epe')}
+                      error={validationState.epe?.error}
                       required
+                      placeholder="Enter name or ID"
                     />
 
                     <FormField
-                      label="Required By"
-                      name="requiredBy"
-                      type="date"
-                      value={buildNotice.requiredBy}
-                      onChange={(value) => updateField('requiredBy', value)}
-                      error={validationState.requiredBy?.error}
+                      label="SL (System Lead)"
+                      name="sl"
+                      value={formState.sl}
+                      onChange={handleFieldUpdate('sl')}
+                      error={validationState.sl?.error}
                       required
+                      placeholder="Enter name or ID"
                     />
-                  </div>
-                </div>
 
-                {/* Location & Priority Section */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
-                    Location & Priority
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
-                      label="Assembly Location"
-                      name="assemblyLocation"
-                      value={buildNotice.assemblyLocation}
-                      onChange={(value) => updateField('assemblyLocation', value)}
-                      error={validationState.assemblyLocation?.error}
+                      label="MPE (Mechanical Project Engineer)"
+                      name="mpe"
+                      value={formState.mpe}
+                      onChange={handleFieldUpdate('mpe')}
+                      error={validationState.mpe?.error}
                       required
-                      placeholder="e.g., Building 5, Floor 2"
+                      placeholder="Enter name or ID"
                     />
 
-                    <FormSelect
-                      label="Priority"
-                      name="priority"
-                      value={buildNotice.priority}
-                      onChange={(value) => updateField('priority', value)}
-                      options={priorityOptions}
-                      required
+                    <FormField
+                      label="FW (Firmware Engineer)"
+                      name="fw"
+                      value={formState.fw}
+                      onChange={handleFieldUpdate('fw')}
+                      error={validationState.fw?.error}
+                      placeholder="Enter name or ID"
                     />
 
-                    <FormSelect
-                      label="Status"
-                      name="status"
-                      value={buildNotice.status}
-                      onChange={(value) => updateField('status', value)}
-                      options={statusOptions}
+                    <FormField
+                      label="RD (R&D Engineer)"
+                      name="rd"
+                      value={formState.rd}
+                      onChange={handleFieldUpdate('rd')}
+                      error={validationState.rd?.error}
+                      placeholder="Enter name or ID"
+                    />
+
+                    <FormField
+                      label="TE (Test Engineer)"
+                      name="te"
+                      value={formState.te}
+                      onChange={handleFieldUpdate('te')}
+                      error={validationState.te?.error}
+                      placeholder="Enter name or ID"
+                    />
+
+                    <FormField
+                      label="EPM (Engineering PM)"
+                      name="epm"
+                      value={formState.epm}
+                      onChange={handleFieldUpdate('epm')}
+                      error={validationState.epm?.error}
+                      placeholder="Enter name or ID"
+                    />
+
+                    <FormField
+                      label="MPM (Manufacturing PM)"
+                      name="mpm"
+                      value={formState.mpm}
+                      onChange={handleFieldUpdate('mpm')}
+                      error={validationState.mpm?.error}
+                      placeholder="Enter name or ID"
                     />
                   </div>
-                </div>
-
-                {/* Additional Notes */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
-                    Additional Notes
-                  </h3>
-                  <FormTextArea
-                    label="Notes"
-                    name="notes"
-                    value={buildNotice.notes}
-                    onChange={(value) => updateField('notes', value)}
-                    placeholder="Any additional information..."
-                    rows={4}
-                  />
                 </div>
 
                 {/* Action Buttons */}
